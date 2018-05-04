@@ -3,7 +3,7 @@
   (:import [java.util Base64]))
 
 (def WORKLOAD
-  1)
+  2)
 
 (def initial-block
   {:prev-hash "b4d455"
@@ -19,16 +19,26 @@
   (digest/sha-256
    (str prev-hash nonce (apply str items))))
 
+(defn byte->bits
+  [byte]
+  (for [bit (range 8)]
+    (not= 0 (bit-and byte (bit-shift-left 1 bit)))))
+
+(defn byte-array->bits
+  [ba]
+  (apply concat (map byte->bits ba)))
+
 (defn work-bits
   [block]
   (take
    WORKLOAD
-   (.decode (Base64/getDecoder)
-            (.getBytes (block-hash block)))))
+   (byte-array->bits
+    (.decode (Base64/getDecoder)
+             (block-hash block)))))
 
 (defn valid-block?
   [block]
-  (every? (partial = 0)
+  (every? (partial = false)
           (work-bits block)))
 
 (defn find-nonce
@@ -38,8 +48,12 @@
            (for [nonce (range)] (assoc block :nonce nonce)))))
 
 (comment
+  (work-bits initial-block)
   (valid-block? initial-block)
-  (find-nonce initial-block)
+  (def foo
+    (find-nonce initial-block))
   (take 10 (for [nonce (range)] (assoc initial-block :nonce nonce)))
-  (map work-bits (take 10 (for [nonce (range)] (assoc initial-block :nonce nonce))))
+  (map work-bits (take 100 (for [nonce (range)] (assoc initial-block :nonce nonce))))
+  (map block-hash
+       (take 10 (for [nonce (range)] (assoc initial-block :nonce nonce))))
   )
